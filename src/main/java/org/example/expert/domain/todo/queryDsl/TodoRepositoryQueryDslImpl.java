@@ -14,9 +14,10 @@ public class TodoRepositoryQueryDslImpl implements TodoRepositoryQueryDsl {
 
     private final JPAQueryFactory jpaQueryFactory;
 
+    QTodo qTodo = QTodo.todo;
+
     @Override
     public Optional<Todo> findByIdWithUser(Long todoId) {
-        QTodo qTodo = QTodo.todo;
 
         return Optional.ofNullable(jpaQueryFactory
             .select(qTodo)
