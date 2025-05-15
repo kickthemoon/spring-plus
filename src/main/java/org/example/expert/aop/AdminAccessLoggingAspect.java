@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 public class AdminAccessLoggingAspect {
 
     private final HttpServletRequest request;
+    private final LoggingService loggingService;
 
     @Before("execution(* org.example.expert.domain.user.controller.UserAdminController.changeUserRole(..))")
     public void logBeforeChangeUserRole(JoinPoint joinPoint) {
@@ -27,5 +28,15 @@ public class AdminAccessLoggingAspect {
 
         log.info("Admin Access Log - User ID: {}, Request Time: {}, Request URL: {}, Method: {}",
                 userId, requestTime, requestUrl, joinPoint.getSignature().getName());
+    }
+
+    @Before("execution(* org.example.expert.domain.manager.controller.ManagerController.saveManager(..))")
+    public void logBeforeManagerPostController(JoinPoint joinPoint) {
+        String userId = String.valueOf(request.getAttribute("userId"));
+        String requestUrl = request.getRequestURI();
+        LocalDateTime requestTime = LocalDateTime.now();
+        String methodName = joinPoint.getSignature().getName();
+
+        loggingService.saveLog(userId, requestUrl, requestTime, methodName);
     }
 }
