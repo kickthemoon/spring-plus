@@ -1,5 +1,6 @@
 package org.example.expert.domain.todo.service;
 
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.example.expert.client.WeatherClient;
 import org.example.expert.domain.common.dto.AuthUser;
@@ -7,6 +8,7 @@ import org.example.expert.domain.common.exception.InvalidRequestException;
 import org.example.expert.domain.todo.dto.request.TodoSaveRequest;
 import org.example.expert.domain.todo.dto.response.TodoResponse;
 import org.example.expert.domain.todo.dto.response.TodoSaveResponse;
+import org.example.expert.domain.todo.dto.response.TodoSearchResponse;
 import org.example.expert.domain.todo.entity.Todo;
 import org.example.expert.domain.todo.repository.TodoRepository;
 import org.example.expert.domain.user.dto.response.UserResponse;
@@ -14,6 +16,8 @@ import org.example.expert.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +29,7 @@ public class TodoService {
     private final TodoRepository todoRepository;
     private final WeatherClient weatherClient;
 
+    @Transactional
     public TodoSaveResponse saveTodo(AuthUser authUser, TodoSaveRequest todoSaveRequest) {
         User user = User.fromAuthUser(authUser);
 
@@ -47,10 +52,10 @@ public class TodoService {
         );
     }
 
-    public Page<TodoResponse> getTodos(int page, int size) {
+    public Page<TodoResponse> getTodos(int page, int size, String weather, LocalDateTime startDate, LocalDateTime endDate) {
         Pageable pageable = PageRequest.of(page - 1, size);
 
-        Page<Todo> todos = todoRepository.findAllByOrderByModifiedAtDesc(pageable);
+        Page<Todo> todos = todoRepository.findAllByOrderByModifiedAtDesc(pageable, weather, startDate, endDate);
 
         return todos.map(todo -> new TodoResponse(
                 todo.getId(),
@@ -78,5 +83,31 @@ public class TodoService {
                 todo.getCreatedAt(),
                 todo.getModifiedAt()
         );
+    }
+
+    public Page<TodoSearchResponse> getTodoSearchs(int page, int size, String title, String manager) {
+
+        if(title != null && manager != null) {
+            throw new InvalidRequestException("Don't Search for title and manager together");
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Direction.DESC, "createTime"));
+
+        Page<Todo> todoSearchs;
+
+        if(title != null) {
+            todoSearchs = todoRepository.findBySearchTitle(title, pageable);
+        } else if(manager != null) {
+            todoSearchs = todoRepository.findBySearchMenager(manager, pageable);
+        } else {
+            throw new InvalidRequestException("Please enter title or manager, Not together");
+        }
+
+        return todoSearchs.map(todo -> new TodoSearchResponse(
+            todo.getTitle(),
+            (long) todo.getManagers().size(),
+            (long) todo.getComments().size(),
+            todo.getCreatedAt()
+        ));
     }
 }
